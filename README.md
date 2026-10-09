@@ -14,7 +14,7 @@ The screen is edge-to-edge. A dark indigo gradient runs from near-black at the t
 - a round dismiss button
 - a snooze pill, default **Snooze 5 mins**
 
-**−** and **+** change the snooze length from 1 to 30 minutes in steps of 1. Tapping the middle of the pill snoozes. While snoozed, the screen shows **Snoozed until HH:MM** and the sound stops. The X stops sound and vibration, cancels a pending snooze, and closes the app. The next open rings again.
+**−** and **+** change the snooze length from 5 to 30 minutes in steps of 5. **−** stops at 5 and **+** stops at 30. Tapping the middle of the pill snoozes. While snoozed, the screen shows **Snoozed until HH:MM** and the sound stops. The X stops sound and vibration, cancels a pending snooze, and closes the app. The next open rings again.
 
 ## Behavior
 
@@ -43,9 +43,9 @@ sdk.dir=/path/to/Android/sdk
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
-`minSdk` is 26. Compile SDK is 37.2 (latest stable platform) and `targetSdk` is 37. `applicationId` is `dev.sahilkashid.instantalarm`. The current version is `0.1.0-debug` (`versionCode` 1).
+`minSdk` is 26. Compile SDK is 37.2 (latest stable platform) and `targetSdk` is 37. `applicationId` is `dev.sahilkashid.instantalarm`. The current version is `0.1.0-debug` (`versionCode` 2).
 
-Unit tests cover snooze duration bounds (1–30 minutes) and clock / “Snoozed until” formatting. They do not need a device.
+Unit tests cover snooze duration bounds (5–30 minutes, in steps of 5) and clock / “Snoozed until” formatting. They do not need a device.
 
 ## Releases
 
