@@ -1,5 +1,6 @@
 package dev.sahilkashid.instantalarm.alarm
 
+import android.content.BroadcastReceiver
 import android.content.Context
 
 /**
@@ -34,17 +35,29 @@ object AlarmController {
         ensureRinging(context, RingingService.REASON_SNOOZE)
     }
 
-    fun snooze(context: Context, minutes: Int) {
+    fun snooze(
+        context: Context,
+        minutes: Int,
+        pending: BroadcastReceiver.PendingResult? = null,
+    ) {
         val app = context.applicationContext
+        // Same immediate silence as dismiss. setAlarmClock and the shade
+        // notice used to run on this stack, before finish was even queued,
+        // which is why Snooze sat on screen longer than X.
         AlarmRinger.stop()
         RingingService.stop(app)
-        val plan = SnoozeScheduler.schedule(app, minutes)
-        if (SnoozePresentation.postsShadeNotice()) {
-            AlarmNotifier.showSnoozeNotice(app, plan.untilEpochMillis)
-        }
-        if (SnoozePresentation.closesAlarmScreen()) {
-            finisher?.invoke()
-        }
+        SnoozeCloseOrder.closeThenSchedule(
+            closeScreen = {
+                if (SnoozePresentation.closesAlarmScreen()) finisher?.invoke()
+            },
+            schedule = {
+                val plan = SnoozeScheduler.schedule(app, minutes)
+                if (SnoozePresentation.postsShadeNotice()) {
+                    AlarmNotifier.showSnoozeNotice(app, plan.untilEpochMillis)
+                }
+            },
+            handoff = { work -> SnoozeWork.enqueue(app, pending, work) },
+        )
     }
 
     fun dismiss(context: Context) {

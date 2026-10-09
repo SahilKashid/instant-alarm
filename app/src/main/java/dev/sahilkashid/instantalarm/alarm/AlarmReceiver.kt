@@ -12,7 +12,15 @@ class AlarmReceiver : BroadcastReceiver() {
                 AlarmController.onSnoozeFired(context)
             }
             ACTION_DISMISS -> AlarmController.dismiss(context)
-            ACTION_SNOOZE -> AlarmController.snooze(context, SnoozeScheduler.minutes(context))
+            ACTION_SNOOZE -> {
+                val pending = goAsync()
+                try {
+                    AlarmController.snooze(context, SnoozeScheduler.minutes(context), pending)
+                } catch (thrown: Throwable) {
+                    pending.finish()
+                    throw thrown
+                }
+            }
         }
     }
 
