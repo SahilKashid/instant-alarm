@@ -40,24 +40,24 @@ sdk.dir=/path/to/Android/sdk
 ```
 
 ```bash
-./gradlew assembleDebug
+./gradlew assembleRelease
 ./gradlew testDebugUnitTest
 ```
 
-The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
+The release APK is `app/build/outputs/apk/release/app-release.apk`. It uses the same `applicationId` as debug and is signed with the standard debug keystore, so it installs as an upgrade over an existing debug build. R8 shrinks code and resources; the shortcut activity, ringing service, broadcast receivers, and notification actions are kept.
 
-`minSdk` is 26. Compile SDK is 37.2 (latest stable platform) and `targetSdk` is 37. `applicationId` is `dev.sahilkashid.instantalarm`. The current version is `0.1.0-debug` (`versionCode` 5).
+`minSdk` is 26. Compile SDK is 37.2 (latest stable platform) and `targetSdk` is 37. `applicationId` is `dev.sahilkashid.instantalarm`. The current version is `0.1.0` (`versionCode` 6).
 
 Unit tests cover snooze duration (1–30 minutes, 1-minute steps below 5 and 5-minute steps from 5 up), when a firing snooze or the **Start alarm** shortcut may open the alarm screen (locked or screen off) versus a heads-up only (unlocked and in use), permission banners clearing when access is granted, a return from settings not counting as a new open, the shortcut trampoline, and clock / “Snoozed until” formatting. They do not need a device.
 
 ## Releases
 
-Debug builds are published as a **temporary GitHub prerelease** tagged `debug`:
+**0.1.0** is the first versioned release. Build it with:
 
-1. `./gradlew assembleDebug`
-2. Upload the full debug APK (`app/build/outputs/apk/debug/app-debug.apk`) to a GitHub prerelease whose tag is `debug`.
-3. When a newer debug build is published, move the `debug` tag to that commit and replace the APK asset. The tag is temporary, not a versioned release.
+```bash
+./gradlew assembleRelease
+```
 
-Versioned releases (a version tag, release notes, and a signed artifact) are published **only when explicitly requested**. Until then the app stays on `0.1.0-debug`.
+Temporary `debug` prereleases are for iteration only. While a version is still in progress, a debug APK may be published as a GitHub prerelease tagged `debug` (`./gradlew assembleDebug`, artifact `app/build/outputs/apk/debug/app-debug.apk`). That prerelease is removed when a version ships.
 
 Do not commit APKs, `local.properties`, or keystores. They are listed in `.gitignore`.

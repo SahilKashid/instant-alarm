@@ -15,13 +15,18 @@ android {
         applicationId = "dev.sahilkashid.instantalarm"
         minSdk = 26
         targetSdk = 37
-        versionCode = 5
-        versionName = "0.1.0-debug"
+        versionCode = 6
+        versionName = "0.1.0"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Same certificate as debug, so this APK upgrades an existing debug
+            // install. The Android Gradle Plugin supplies that keystore; nothing
+            // is committed.
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
