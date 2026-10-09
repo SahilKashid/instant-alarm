@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Instant Alarm</string>
+    <string name="alarm_label">Alarm</string>
+    <string name="dismiss_alarm">Dismiss alarm</string>
+    <string name="decrease_snooze">Decrease snooze time</string>
+    <string name="increase_snooze">Increase snooze time</string>
+    <string name="notification_ringing">Ringing</string>
+    <string name="notification_channel_ringing">Alarm</string>
+    <string name="notification_channel_ringing_desc">Shown while Instant Alarm is ringing</string>
+    <string name="notification_channel_snooze">Snooze</string>
+    <string name="notification_channel_snooze_desc">Shown while an Instant Alarm snooze is waiting</string>
+    <string name="notification_dismiss">Dismiss</string>
+    <string name="notification_snooze">Snooze</string>
+    <string name="hint_notifications">Notifications are off, so snooze may not wake the screen.</string>
+    <string name="hint_exact">Exact alarms are off, so snooze may be delayed.</string>
+    <string name="hint_fullscreen">Full-screen alerts are off, so snooze may not appear over the lock screen.</string>
+</resources>
