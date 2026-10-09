@@ -46,7 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sahilkashid.instantalarm.R
-import dev.sahilkashid.instantalarm.alarm.AlarmPhase
+import dev.sahilkashid.instantalarm.alarm.SnoozePresentation
 import dev.sahilkashid.instantalarm.domain.ClockText
 import dev.sahilkashid.instantalarm.domain.SnoozeDuration
 import dev.sahilkashid.instantalarm.ui.theme.InstantAlarmTheme
@@ -69,7 +69,6 @@ private val AlarmBackground = Brush.verticalGradient(
 
 @Composable
 fun AlarmScreen(
-    phase: AlarmPhase,
     snoozeMinutes: Int,
     permissionHint: String?,
     fullScreenPrompt: String?,
@@ -87,11 +86,11 @@ fun AlarmScreen(
     val locale = Locale.getDefault()
     val timeText = ClockText.formatTime(now.toLocalTime(), is24Hour, locale)
     val dateText = ClockText.formatDate(now.toLocalDate(), locale)
-    val snoozedLabel = (phase as? AlarmPhase.Snoozed)?.let { snoozed ->
-        ClockText.formatSnoozedUntil(snoozed.untilEpochMillis, is24Hour, java.time.ZoneId.systemDefault(), locale)
+    val ringingHint = permissionHint?.takeIf {
+        SnoozePresentation.showPermissionHintWhileRinging()
     }
 
-    KeepScreenOn(enabled = phase is AlarmPhase.Ringing)
+    KeepScreenOn()
 
     Box(
         modifier = modifier
@@ -133,21 +132,10 @@ fun AlarmScreen(
                 fontWeight = FontWeight.Normal,
                 fontFamily = FontFamily.SansSerif,
             )
-            if (snoozedLabel != null) {
+            if (ringingHint != null) {
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    text = snoozedLabel,
-                    color = Color.White.copy(alpha = 0.92f),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.SansSerif,
-                    textAlign = TextAlign.Center,
-                )
-            }
-            if (permissionHint != null && phase is AlarmPhase.Snoozed) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = permissionHint,
+                    text = ringingHint,
                     color = Color.White.copy(alpha = 0.78f),
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
@@ -203,15 +191,11 @@ private fun rememberNow(): LocalDateTime {
 }
 
 @Composable
-private fun KeepScreenOn(enabled: Boolean) {
+private fun KeepScreenOn() {
     val view = LocalView.current
-    DisposableEffect(enabled) {
+    DisposableEffect(Unit) {
         val window = (view.context as? Activity)?.window
-        if (enabled) {
-            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 }
@@ -347,7 +331,6 @@ private fun StepCircle(
 private fun AlarmScreenPreview() {
     InstantAlarmTheme {
         AlarmScreen(
-            phase = AlarmPhase.Ringing,
             snoozeMinutes = 5,
             permissionHint = null,
             fullScreenPrompt = null,

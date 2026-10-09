@@ -32,7 +32,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.sahilkashid.instantalarm.alarm.AlarmController
 import dev.sahilkashid.instantalarm.alarm.AlarmLaunchPolicy
 import dev.sahilkashid.instantalarm.alarm.AlarmNotifier
-import dev.sahilkashid.instantalarm.alarm.AlarmPhase
 import dev.sahilkashid.instantalarm.alarm.AlarmRinger
 import dev.sahilkashid.instantalarm.alarm.PermissionBanners
 import dev.sahilkashid.instantalarm.alarm.RingingService
@@ -44,7 +43,12 @@ import dev.sahilkashid.instantalarm.ui.theme.InstantAlarmTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
-    private val finisher = { finish() }
+    private val finisher = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(false)
+        }
+        finishAndRemoveTask()
+    }
     private var askedForNotifications = false
     private var returningFromSettings = false
     private val permissionEpoch = MutableStateFlow(0)
@@ -76,15 +80,13 @@ class MainActivity : ComponentActivity() {
         AlarmController.attachFinisher(finisher)
         setContent {
             InstantAlarmTheme {
-                val phase by AlarmController.phase.collectAsStateWithLifecycle()
                 var snoozeMinutes by remember {
                     mutableIntStateOf(SnoozeScheduler.minutes(this@MainActivity))
                 }
                 val banners = rememberPermissionBanners()
                 AlarmScreen(
-                    phase = phase,
                     snoozeMinutes = snoozeMinutes,
-                    permissionHint = if (phase is AlarmPhase.Snoozed) banners.snoozeHint else null,
+                    permissionHint = banners.snoozeHint,
                     fullScreenPrompt = banners.fullScreenPrompt,
                     onDismiss = { AlarmController.dismiss(this@MainActivity) },
                     onSnooze = { AlarmController.snooze(this@MainActivity, snoozeMinutes) },
@@ -121,13 +123,6 @@ class MainActivity : ComponentActivity() {
         if (SettingsReturn.shouldStartRinging(fromSettings)) {
             AlarmController.onActivityForeground(this)
         }
-    }
-
-    override fun onStop() {
-        if (!isChangingConfigurations) {
-            AlarmController.onActivityBackground()
-        }
-        super.onStop()
     }
 
     override fun onDestroy() {

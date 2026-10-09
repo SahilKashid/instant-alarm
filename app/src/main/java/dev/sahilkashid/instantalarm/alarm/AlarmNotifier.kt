@@ -22,6 +22,7 @@ object AlarmNotifier {
     private const val REQUEST_DISMISS = 4202
     private const val REQUEST_SNOOZE = 4203
     private const val REQUEST_FULL_SCREEN = 4204
+    private const val REQUEST_SNOOZE_DISMISS = 4205
 
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -96,6 +97,15 @@ object AlarmNotifier {
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(label)
             .setContentIntent(activityIntent(context, REQUEST_CONTENT))
+            .addAction(
+                0,
+                context.getString(R.string.notification_dismiss),
+                broadcastIntent(
+                    context,
+                    SnoozePresentation.shadeDismissAction(),
+                    REQUEST_SNOOZE_DISMISS,
+                ),
+            )
             .setAutoCancel(true)
             .setSilent(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
