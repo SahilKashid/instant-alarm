@@ -27,8 +27,7 @@ class RingingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Read this before posting. The full-screen intent itself may turn the
         // screen on, and an unlocked phone that is in use must stay a heads-up.
-        val openAlarmScreen = intent?.getStringExtra(EXTRA_REASON) == REASON_SNOOZE &&
-            shouldOpenAlarmScreen()
+        val openAlarmScreen = shouldOpenAlarmScreen(intent?.getStringExtra(EXTRA_REASON))
         val notification = AlarmNotifier.ringingNotification(this)
         try {
             ServiceCompat.startForeground(
@@ -91,10 +90,11 @@ class RingingService : Service() {
      * Screen off, or the keyguard is up. An unlocked interactive phone keeps
      * the heads-up notification and is not taken over.
      */
-    private fun shouldOpenAlarmScreen(): Boolean {
+    private fun shouldOpenAlarmScreen(reason: String?): Boolean {
         val power = getSystemService(PowerManager::class.java)
         val keyguard = getSystemService(KeyguardManager::class.java)
-        return AlarmLaunchPolicy.launchActivityDirectly(
+        return AlarmLaunchPolicy.shouldOpenAlarmUi(
+            reason,
             screenInteractive = power?.isInteractive == true,
             keyguardLocked = keyguard?.isKeyguardLocked == true,
         )
@@ -121,6 +121,7 @@ class RingingService : Service() {
         private const val EXTRA_REASON = "reason"
         const val REASON_MANUAL = "manual"
         const val REASON_SNOOZE = "snooze"
+        const val REASON_SHORTCUT = "shortcut"
 
         fun start(context: Context, reason: String) {
             val app = context.applicationContext

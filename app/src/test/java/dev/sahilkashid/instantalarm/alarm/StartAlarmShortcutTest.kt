@@ -22,12 +22,22 @@ class StartAlarmShortcutTest {
 
         assertTrue(shortcuts.contains("android:shortcutId=\"${StartAlarmShortcut.ID}\""))
         assertTrue(shortcuts.contains("android:action=\"${StartAlarmShortcut.ACTION}\""))
-        assertTrue(shortcuts.contains("android:targetClass=\"dev.sahilkashid.instantalarm.MainActivity\""))
+        assertTrue(
+            shortcuts.contains(
+                "android:targetClass=\"dev.sahilkashid.instantalarm.alarm.StartAlarmActivity\"",
+            ),
+        )
+        assertFalse(shortcuts.contains("MainActivity"))
         assertTrue(shortcuts.contains("@string/shortcut_start_alarm"))
         assertTrue(shortcuts.contains("@drawable/ic_shortcut_start_alarm"))
 
         assertTrue(manifest.contains("android.app.shortcuts"))
         assertTrue(manifest.contains("@xml/shortcuts"))
+        assertTrue(manifest.contains(".alarm.StartAlarmActivity"))
+        assertTrue(manifest.contains("android:excludeFromRecents=\"true\""))
+        assertTrue(manifest.contains("android:noHistory=\"true\""))
+        assertTrue(manifest.contains("android:taskAffinity=\"\""))
+        assertTrue(manifest.contains("@android:style/Theme.NoDisplay"))
         assertTrue(
             manifest.contains("android.intent.action.MAIN") &&
                 manifest.contains("android.intent.category.LAUNCHER"),

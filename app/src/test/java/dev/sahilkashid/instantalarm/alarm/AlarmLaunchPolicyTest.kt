@@ -19,6 +19,45 @@ class AlarmLaunchPolicyTest {
     }
 
     @Test
+    fun shortcutAndSnoozeShareTheFullScreenRule() {
+        assertFalse(
+            AlarmLaunchPolicy.shouldOpenAlarmUi(
+                RingingService.REASON_SHORTCUT,
+                screenInteractive = true,
+                keyguardLocked = false,
+            ),
+        )
+        assertTrue(
+            AlarmLaunchPolicy.shouldOpenAlarmUi(
+                RingingService.REASON_SHORTCUT,
+                screenInteractive = false,
+                keyguardLocked = false,
+            ),
+        )
+        assertTrue(
+            AlarmLaunchPolicy.shouldOpenAlarmUi(
+                RingingService.REASON_SHORTCUT,
+                screenInteractive = true,
+                keyguardLocked = true,
+            ),
+        )
+        assertTrue(
+            AlarmLaunchPolicy.shouldOpenAlarmUi(
+                RingingService.REASON_SNOOZE,
+                screenInteractive = false,
+                keyguardLocked = true,
+            ),
+        )
+        assertFalse(
+            AlarmLaunchPolicy.shouldOpenAlarmUi(
+                RingingService.REASON_MANUAL,
+                screenInteractive = false,
+                keyguardLocked = true,
+            ),
+        )
+    }
+
+    @Test
     fun fullScreenIntentIsAttachedOnlyWhenTheAppMaySendOne() {
         assertTrue(AlarmLaunchPolicy.attachFullScreenIntent(canUseFullScreenIntent = true))
         assertFalse(AlarmLaunchPolicy.attachFullScreenIntent(canUseFullScreenIntent = false))

@@ -35,6 +35,14 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <activity
+            android:name=".alarm.StartAlarmActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay" />
+
         <service
             android:name=".alarm.RingingService"
             android:exported="false"

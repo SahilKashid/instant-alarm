@@ -1,8 +1,12 @@
 package dev.sahilkashid.instantalarm
 
 import android.Manifest
+import android.app.AlarmManager
 import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -14,31 +18,44 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.sahilkashid.instantalarm.alarm.AlarmController
 import dev.sahilkashid.instantalarm.alarm.AlarmLaunchPolicy
 import dev.sahilkashid.instantalarm.alarm.AlarmNotifier
 import dev.sahilkashid.instantalarm.alarm.AlarmPhase
 import dev.sahilkashid.instantalarm.alarm.AlarmRinger
+import dev.sahilkashid.instantalarm.alarm.PermissionBanners
 import dev.sahilkashid.instantalarm.alarm.RingingService
+import dev.sahilkashid.instantalarm.alarm.SettingsReturn
 import dev.sahilkashid.instantalarm.alarm.SnoozeScheduler
-import dev.sahilkashid.instantalarm.alarm.StartAlarmShortcut
 import dev.sahilkashid.instantalarm.domain.SnoozeDuration
 import dev.sahilkashid.instantalarm.ui.AlarmScreen
 import dev.sahilkashid.instantalarm.ui.theme.InstantAlarmTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
     private val finisher = { finish() }
     private var askedForNotifications = false
+    private var returningFromSettings = false
+    private val permissionEpoch = MutableStateFlow(0)
 
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { /* The alarm still rings if notifications are denied. */ }
+    ) { notePermissionChange() }
+
+    private val settingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { notePermissionChange() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Before the window is created, so a full-screen intent can show this
@@ -63,11 +80,12 @@ class MainActivity : ComponentActivity() {
                 var snoozeMinutes by remember {
                     mutableIntStateOf(SnoozeScheduler.minutes(this@MainActivity))
                 }
+                val banners = rememberPermissionBanners()
                 AlarmScreen(
                     phase = phase,
                     snoozeMinutes = snoozeMinutes,
-                    permissionHint = if (phase is AlarmPhase.Snoozed) snoozeHint() else null,
-                    fullScreenPrompt = fullScreenPrompt(),
+                    permissionHint = if (phase is AlarmPhase.Snoozed) banners.snoozeHint else null,
+                    fullScreenPrompt = banners.fullScreenPrompt,
                     onDismiss = { AlarmController.dismiss(this@MainActivity) },
                     onSnooze = { AlarmController.snooze(this@MainActivity, snoozeMinutes) },
                     onDecreaseSnooze = {
@@ -84,26 +102,25 @@ class MainActivity : ComponentActivity() {
             }
         }
         requestNotificationPermission()
-        deliverShortcut(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         showOverLockScreen()
-        deliverShortcut(intent)
-    }
-
-    private fun deliverShortcut(intent: Intent?) {
-        if (!StartAlarmShortcut.matches(intent?.action)) return
-        AlarmController.onShortcutLaunch(this)
-        // Drop the action so a later recreate, such as rotation, does not ring again.
-        intent?.action = Intent.ACTION_MAIN
+        // Tapping the launcher icon is a real open, not a return from settings.
+        if (intent.action == Intent.ACTION_MAIN) {
+            returningFromSettings = false
+        }
     }
 
     override fun onStart() {
         super.onStart()
-        AlarmController.onActivityForeground(this)
+        val fromSettings = returningFromSettings
+        returningFromSettings = false
+        if (SettingsReturn.shouldStartRinging(fromSettings)) {
+            AlarmController.onActivityForeground(this)
+        }
     }
 
     override fun onStop() {
@@ -136,42 +153,74 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestNotificationPermission() {
-        if (askedForNotifications || Build.VERSION.SDK_INT < 33) return
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS,
-        ) == PackageManager.PERMISSION_GRANTED
-        if (granted) return
+        if (askedForNotifications || notificationsGranted()) return
         askedForNotifications = true
         notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    private fun snoozeHint(): String? {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return getString(R.string.hint_notifications)
-        }
-        if (!SnoozeScheduler.canUseExactAlarms(this)) {
-            return getString(R.string.hint_exact)
-        }
-        return null
+    private fun notificationsGranted(): Boolean {
+        if (Build.VERSION.SDK_INT < 33) return true
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun fullScreenPrompt(): String? {
-        val offer = AlarmLaunchPolicy.shouldOfferFullScreenAccess(
-            Build.VERSION.SDK_INT,
-            AlarmNotifier.canUseFullScreenIntent(this),
+    private fun notePermissionChange() {
+        permissionEpoch.value += 1
+    }
+
+    @Composable
+    private fun rememberPermissionBanners(): PermissionBannerText {
+        val epoch by permissionEpoch.collectAsStateWithLifecycle()
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) notePermissionChange()
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    notePermissionChange()
+                }
+            }
+            ContextCompat.registerReceiver(
+                this@MainActivity,
+                receiver,
+                IntentFilter(AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                unregisterReceiver(receiver)
+            }
+        }
+        return remember(epoch) { currentPermissionBanners() }
+    }
+
+    private fun currentPermissionBanners(): PermissionBannerText {
+        val state = PermissionBanners.resolve(
+            sdkInt = Build.VERSION.SDK_INT,
+            notificationsGranted = notificationsGranted(),
+            exactAlarmsAllowed = SnoozeScheduler.canUseExactAlarms(this),
+            canUseFullScreenIntent = AlarmNotifier.canUseFullScreenIntent(this),
         )
-        return if (offer) getString(R.string.hint_fullscreen) else null
+        val snoozeHint = when (state.snoozeHint) {
+            PermissionBanners.NOTIFICATIONS -> getString(R.string.hint_notifications)
+            PermissionBanners.EXACT_ALARM -> getString(R.string.hint_exact)
+            else -> null
+        }
+        val fullScreenPrompt = if (state.fullScreen != null) {
+            getString(R.string.hint_fullscreen)
+        } else {
+            null
+        }
+        return PermissionBannerText(snoozeHint, fullScreenPrompt)
     }
 
     private fun openHintSettings() {
         val intent = when {
-            Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
-                PackageManager.PERMISSION_GRANTED -> {
+            !notificationsGranted() -> {
                 Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                     putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
                 }
@@ -184,20 +233,24 @@ class MainActivity : ComponentActivity() {
             }
             else -> return
         }
-        try {
-            startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
-        }
+        launchSettings(intent)
     }
 
     private fun openFullScreenAccess() {
         val packageUri = Uri.parse("package:$packageName")
         for (action in AlarmLaunchPolicy.fullScreenSettingsActions()) {
-            try {
-                startActivity(Intent(action).apply { data = packageUri })
-                return
-            } catch (_: ActivityNotFoundException) {
-            }
+            if (launchSettings(Intent(action).apply { data = packageUri })) return
+        }
+    }
+
+    private fun launchSettings(intent: Intent): Boolean {
+        return try {
+            returningFromSettings = true
+            settingsLauncher.launch(intent)
+            true
+        } catch (_: ActivityNotFoundException) {
+            returningFromSettings = false
+            false
         }
     }
 
@@ -205,3 +258,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_FROM_SNOOZE = "from_snooze"
     }
 }
+
+private data class PermissionBannerText(
+    val snoozeHint: String?,
+    val fullScreenPrompt: String?,
+)

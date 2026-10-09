@@ -1,7 +1,8 @@
 package dev.sahilkashid.instantalarm.alarm
 
 /**
- * How a firing snooze presents itself, matching a stock alarm clock.
+ * How a firing snooze and the launcher shortcut present themselves, matching
+ * a stock alarm clock.
  *
  * The system full-screen intent on a high-importance alarm notification is what
  * opens the alarm screen: locked or screen-off launches that screen and turns
@@ -22,6 +23,22 @@ object AlarmLaunchPolicy {
 
     /** The platform launches the full-screen intent only when this app may send one. */
     fun attachFullScreenIntent(canUseFullScreenIntent: Boolean): Boolean = canUseFullScreenIntent
+
+    /**
+     * A firing snooze and the launcher shortcut share this rule. Manual opens
+     * ([RingingService.REASON_MANUAL]) always come from an activity that is
+     * already on screen, so they do not launch another one.
+     */
+    fun shouldOpenAlarmUi(
+        reason: String?,
+        screenInteractive: Boolean,
+        keyguardLocked: Boolean,
+    ): Boolean {
+        if (reason != RingingService.REASON_SNOOZE && reason != RingingService.REASON_SHORTCUT) {
+            return false
+        }
+        return launchActivityDirectly(screenInteractive, keyguardLocked)
+    }
 
     /** Android 14+ can revoke full-screen intents; offer an in-app grant when it has. */
     fun shouldOfferFullScreenAccess(sdkInt: Int, canUseFullScreenIntent: Boolean): Boolean {
