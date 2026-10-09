@@ -1,5 +1,6 @@
 package dev.sahilkashid.instantalarm.alarm
 
+import android.app.KeyguardManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -24,6 +25,10 @@ class RingingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Read this before posting. The full-screen intent itself may turn the
+        // screen on, and an unlocked phone that is in use must stay a heads-up.
+        val openAlarmScreen = intent?.getStringExtra(EXTRA_REASON) == REASON_SNOOZE &&
+            shouldOpenAlarmScreen()
         val notification = AlarmNotifier.ringingNotification(this)
         try {
             ServiceCompat.startForeground(
@@ -37,10 +42,7 @@ class RingingService : Service() {
             // missing. Still ring if the process is alive; dismiss releases it.
             ownsRinger = false
             AlarmRinger.start(applicationContext)
-            if (intent?.getStringExtra(EXTRA_REASON) == REASON_SNOOZE) {
-                wakeScreen()
-                launchAlarmScreen()
-            }
+            if (openAlarmScreen) launchAlarmScreen()
             stopSelf()
             return START_NOT_STICKY
         }
@@ -48,10 +50,7 @@ class RingingService : Service() {
         ownsRinger = true
         AlarmRinger.start(applicationContext)
         activateSession()
-        if (intent?.getStringExtra(EXTRA_REASON) == REASON_SNOOZE) {
-            wakeScreen()
-            launchAlarmScreen()
-        }
+        if (openAlarmScreen) launchAlarmScreen()
         return START_NOT_STICKY
     }
 
@@ -88,16 +87,17 @@ class RingingService : Service() {
         }
     }
 
-    @Suppress("DEPRECATION")
-    private fun wakeScreen() {
-        val powerManager = getSystemService(PowerManager::class.java) ?: return
-        val wakeLock = powerManager.newWakeLock(
-            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
-                PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                PowerManager.ON_AFTER_RELEASE,
-            "instantalarm:screen",
+    /**
+     * Screen off, or the keyguard is up. An unlocked interactive phone keeps
+     * the heads-up notification and is not taken over.
+     */
+    private fun shouldOpenAlarmScreen(): Boolean {
+        val power = getSystemService(PowerManager::class.java)
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        return AlarmLaunchPolicy.launchActivityDirectly(
+            screenInteractive = power?.isInteractive == true,
+            keyguardLocked = keyguard?.isKeyguardLocked == true,
         )
-        wakeLock.acquire(5_000L)
     }
 
     private fun launchAlarmScreen() {

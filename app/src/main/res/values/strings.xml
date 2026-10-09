@@ -14,5 +14,5 @@
     <string name="notification_snooze">Snooze</string>
     <string name="hint_notifications">Notifications are off, so snooze may not wake the screen.</string>
     <string name="hint_exact">Exact alarms are off, so snooze may be delayed.</string>
-    <string name="hint_fullscreen">Full-screen alerts are off, so snooze may not appear over the lock screen.</string>
+    <string name="hint_fullscreen">Allow full-screen alarms on the lock screen</string>
 </resources>

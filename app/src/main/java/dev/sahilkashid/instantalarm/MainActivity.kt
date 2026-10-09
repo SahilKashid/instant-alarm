@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.sahilkashid.instantalarm.alarm.AlarmController
+import dev.sahilkashid.instantalarm.alarm.AlarmLaunchPolicy
 import dev.sahilkashid.instantalarm.alarm.AlarmNotifier
 import dev.sahilkashid.instantalarm.alarm.AlarmPhase
 import dev.sahilkashid.instantalarm.alarm.AlarmRinger
@@ -39,6 +40,12 @@ class MainActivity : ComponentActivity() {
     ) { /* The alarm still rings if notifications are denied. */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Before the window is created, so a full-screen intent can show this
+        // activity over the lock screen and turn the display on.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
         super.onCreate(savedInstanceState)
         showOverLockScreen()
         enableEdgeToEdge(
@@ -59,6 +66,7 @@ class MainActivity : ComponentActivity() {
                     phase = phase,
                     snoozeMinutes = snoozeMinutes,
                     permissionHint = if (phase is AlarmPhase.Snoozed) snoozeHint() else null,
+                    fullScreenPrompt = fullScreenPrompt(),
                     onDismiss = { AlarmController.dismiss(this@MainActivity) },
                     onSnooze = { AlarmController.snooze(this@MainActivity, snoozeMinutes) },
                     onDecreaseSnooze = {
@@ -70,10 +78,17 @@ class MainActivity : ComponentActivity() {
                         SnoozeScheduler.setMinutes(this@MainActivity, snoozeMinutes)
                     },
                     onPermissionHintClick = { openHintSettings() },
+                    onFullScreenPromptClick = { openFullScreenAccess() },
                 )
             }
         }
         requestNotificationPermission()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        showOverLockScreen()
     }
 
     override fun onStart() {
@@ -101,13 +116,13 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
-            )
         }
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+        )
     }
 
     private fun requestNotificationPermission() {
@@ -131,10 +146,15 @@ class MainActivity : ComponentActivity() {
         if (!SnoozeScheduler.canUseExactAlarms(this)) {
             return getString(R.string.hint_exact)
         }
-        if (!AlarmNotifier.canUseFullScreenIntent(this)) {
-            return getString(R.string.hint_fullscreen)
-        }
         return null
+    }
+
+    private fun fullScreenPrompt(): String? {
+        val offer = AlarmLaunchPolicy.shouldOfferFullScreenAccess(
+            Build.VERSION.SDK_INT,
+            AlarmNotifier.canUseFullScreenIntent(this),
+        )
+        return if (offer) getString(R.string.hint_fullscreen) else null
     }
 
     private fun openHintSettings() {
@@ -152,16 +172,22 @@ class MainActivity : ComponentActivity() {
                     data = Uri.parse("package:$packageName")
                 }
             }
-            Build.VERSION.SDK_INT >= 34 && !AlarmNotifier.canUseFullScreenIntent(this) -> {
-                Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-                    data = Uri.parse("package:$packageName")
-                }
-            }
             else -> return
         }
         try {
             startActivity(intent)
         } catch (_: ActivityNotFoundException) {
+        }
+    }
+
+    private fun openFullScreenAccess() {
+        val packageUri = Uri.parse("package:$packageName")
+        for (action in AlarmLaunchPolicy.fullScreenSettingsActions()) {
+            try {
+                startActivity(Intent(action).apply { data = packageUri })
+                return
+            } catch (_: ActivityNotFoundException) {
+            }
         }
     }
 

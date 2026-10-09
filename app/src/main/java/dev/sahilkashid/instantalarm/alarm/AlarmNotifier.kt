@@ -21,6 +21,7 @@ object AlarmNotifier {
     private const val REQUEST_CONTENT = 4201
     private const val REQUEST_DISMISS = 4202
     private const val REQUEST_SNOOZE = 4203
+    private const val REQUEST_FULL_SCREEN = 4204
 
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -51,8 +52,8 @@ object AlarmNotifier {
 
     fun ringingNotification(context: Context): Notification {
         ensureChannels(context)
-        val content = activityIntent(context)
-        return NotificationCompat.Builder(context, CHANNEL_RINGING)
+        val open = activityIntent(context, REQUEST_CONTENT)
+        val builder = NotificationCompat.Builder(context, CHANNEL_RINGING)
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(context.getString(R.string.notification_ringing))
@@ -60,10 +61,7 @@ object AlarmNotifier {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
-            .setSound(null)
-            .setVibrate(null)
-            .setContentIntent(content)
-            .setFullScreenIntent(content, true)
+            .setContentIntent(open)
             .addAction(
                 0,
                 context.getString(R.string.notification_snooze),
@@ -75,7 +73,13 @@ object AlarmNotifier {
                 broadcastIntent(context, AlarmReceiver.ACTION_DISMISS, REQUEST_DISMISS),
             )
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+        if (AlarmLaunchPolicy.attachFullScreenIntent(canUseFullScreenIntent(context))) {
+            // Distinct from the content intent so the system can launch it on its own
+            // when the phone is locked or the screen is off, and show a heads-up instead
+            // while the phone is unlocked and in use.
+            builder.setFullScreenIntent(activityIntent(context, REQUEST_FULL_SCREEN), true)
+        }
+        return builder.build()
     }
 
     fun showSnoozeNotice(context: Context, untilEpochMillis: Long) {
@@ -91,7 +95,7 @@ object AlarmNotifier {
             .setSmallIcon(R.drawable.ic_stat_alarm)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(label)
-            .setContentIntent(activityIntent(context))
+            .setContentIntent(activityIntent(context, REQUEST_CONTENT))
             .setAutoCancel(true)
             .setSilent(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -113,15 +117,16 @@ object AlarmNotifier {
         return manager.canUseFullScreenIntent()
     }
 
-    private fun activityIntent(context: Context): PendingIntent {
+    private fun activityIntent(context: Context, requestCode: Int): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
                 Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_FROM_SNOOZE, requestCode == REQUEST_FULL_SCREEN)
         }
         return PendingIntent.getActivity(
             context,
-            REQUEST_CONTENT,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
