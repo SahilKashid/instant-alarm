@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="start_alarm"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_start_alarm"
+        android:shortcutShortLabel="@string/shortcut_start_alarm"
+        android:shortcutLongLabel="@string/shortcut_start_alarm_long">
+        <intent
+            android:action="dev.sahilkashid.instantalarm.action.START_ALARM"
+            android:targetPackage="dev.sahilkashid.instantalarm"
+            android:targetClass="dev.sahilkashid.instantalarm.alarm.StartAlarmActivity" />
+    </shortcut>
+</shortcuts>

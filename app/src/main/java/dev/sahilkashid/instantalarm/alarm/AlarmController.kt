@@ -33,9 +33,17 @@ object AlarmController {
             }
             suppressRing = false
         }
-        SnoozeScheduler.cancel(context)
-        _phase.value = AlarmPhase.Ringing
-        ensureRinging(context, RingingService.REASON_MANUAL)
+        beginRinging(context)
+    }
+
+    /**
+     * Launcher "Start alarm" shortcut. Cancels a pending snooze and rings.
+     * The service decides whether to show the alarm screen: locked or screen-off
+     * opens it, an unlocked phone in use only posts the heads-up.
+     */
+    fun onShortcutLaunch(context: Context) {
+        suppressRing = false
+        beginRinging(context, RingingService.REASON_SHORTCUT)
     }
 
     fun onActivityBackground() {
@@ -65,6 +73,15 @@ object AlarmController {
         RingingService.stop(app)
         SnoozeScheduler.cancel(app)
         finisher?.invoke()
+    }
+
+    private fun beginRinging(
+        context: Context,
+        reason: String = RingingService.REASON_MANUAL,
+    ) {
+        SnoozeScheduler.cancel(context)
+        _phase.value = AlarmPhase.Ringing
+        ensureRinging(context, reason)
     }
 
     private fun ensureRinging(context: Context, reason: String) {

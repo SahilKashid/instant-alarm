@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -70,11 +72,13 @@ fun AlarmScreen(
     phase: AlarmPhase,
     snoozeMinutes: Int,
     permissionHint: String?,
+    fullScreenPrompt: String?,
     onDismiss: () -> Unit,
     onSnooze: () -> Unit,
     onDecreaseSnooze: () -> Unit,
     onIncreaseSnooze: () -> Unit,
     onPermissionHintClick: () -> Unit,
+    onFullScreenPromptClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -152,6 +156,24 @@ fun AlarmScreen(
                     modifier = Modifier
                         .padding(horizontal = 32.dp)
                         .clickable(onClick = onPermissionHintClick),
+                )
+            }
+            if (fullScreenPrompt != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = fullScreenPrompt,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = FontFamily.SansSerif,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(horizontal = 32.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.16f))
+                        .clickable(role = Role.Button, onClick = onFullScreenPromptClick)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                 )
             }
             Spacer(Modifier.weight(1.4f))
@@ -328,11 +350,13 @@ private fun AlarmScreenPreview() {
             phase = AlarmPhase.Ringing,
             snoozeMinutes = 5,
             permissionHint = null,
+            fullScreenPrompt = null,
             onDismiss = {},
             onSnooze = {},
             onDecreaseSnooze = {},
             onIncreaseSnooze = {},
             onPermissionHintClick = {},
+            onFullScreenPromptClick = {},
         )
     }
 }
