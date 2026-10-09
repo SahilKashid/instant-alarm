@@ -15,7 +15,7 @@ android {
         applicationId = "dev.sahilkashid.instantalarm"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
+        versionCode = 4
         versionName = "0.1.0-debug"
     }
 

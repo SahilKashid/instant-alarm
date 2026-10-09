@@ -33,9 +33,16 @@ object AlarmController {
             }
             suppressRing = false
         }
-        SnoozeScheduler.cancel(context)
-        _phase.value = AlarmPhase.Ringing
-        ensureRinging(context, RingingService.REASON_MANUAL)
+        beginRinging(context)
+    }
+
+    /**
+     * Launcher "Start alarm" shortcut. Same ring as opening the app, and it
+     * wins even when this visit is still showing a snooze.
+     */
+    fun onShortcutLaunch(context: Context) {
+        suppressRing = false
+        beginRinging(context)
     }
 
     fun onActivityBackground() {
@@ -65,6 +72,12 @@ object AlarmController {
         RingingService.stop(app)
         SnoozeScheduler.cancel(app)
         finisher?.invoke()
+    }
+
+    private fun beginRinging(context: Context) {
+        SnoozeScheduler.cancel(context)
+        _phase.value = AlarmPhase.Ringing
+        ensureRinging(context, RingingService.REASON_MANUAL)
     }
 
     private fun ensureRinging(context: Context, reason: String) {

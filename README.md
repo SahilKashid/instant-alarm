@@ -1,6 +1,6 @@
 # Instant Alarm
 
-Instant Alarm is an Android alarm that does **not** go off at a scheduled time. Opening the app is the trigger: every cold start, and every time the app is brought back to the foreground, starts the alarm sound and vibration and shows the alarm screen.
+Instant Alarm is an Android alarm that does **not** go off at a scheduled time. Opening the app is the trigger: every cold start, and every time the app is brought back to the foreground, starts the alarm sound and vibration and shows the alarm screen. Long-pressing the icon shows a **Start alarm** shortcut that does the same thing.
 
 There is no time picker, no repeating schedule, and no alarm list.
 
@@ -13,6 +13,8 @@ The screen is edge-to-edge. A dark indigo gradient runs from near-black at the t
 - the date (`Fri, October 9`)
 - a round dismiss button
 - a snooze pill, default **Snooze 5 mins**
+
+Long-pressing the launcher icon shows **Start alarm**. It opens the app and starts ringing immediately, including from a cold start and when the app is already open on a snooze. That shortcut is a new manual trigger, so it cancels the snooze.
 
 **−** and **+** change the snooze length from 1 to 30 minutes. Below 5 they step by 1 minute: from 5, **−** goes 4, 3, 2, 1 and then stops. At 5 and above they step by 5: from 5, **+** goes 10, 15, and so on up to 30, and from 10, **−** goes to 5. The label is **Snooze 1 min** or **Snooze 5 mins**. Tapping the middle of the pill snoozes. While snoozed, the screen shows **Snoozed until HH:MM** and the sound stops. The X stops sound and vibration, cancels a pending snooze, and closes the app. The next open rings again.
 
@@ -44,9 +46,9 @@ sdk.dir=/path/to/Android/sdk
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
-`minSdk` is 26. Compile SDK is 37.2 (latest stable platform) and `targetSdk` is 37. `applicationId` is `dev.sahilkashid.instantalarm`. The current version is `0.1.0-debug` (`versionCode` 3).
+`minSdk` is 26. Compile SDK is 37.2 (latest stable platform) and `targetSdk` is 37. `applicationId` is `dev.sahilkashid.instantalarm`. The current version is `0.1.0-debug` (`versionCode` 4).
 
-Unit tests cover snooze duration (1–30 minutes, 1-minute steps below 5 and 5-minute steps from 5 up), when a firing snooze may open the alarm screen (locked or screen off) versus a heads-up only (unlocked and in use), and clock / “Snoozed until” formatting. They do not need a device.
+Unit tests cover snooze duration (1–30 minutes, 1-minute steps below 5 and 5-minute steps from 5 up), when a firing snooze may open the alarm screen (locked or screen off) versus a heads-up only (unlocked and in use), the **Start alarm** launcher shortcut, and clock / “Snoozed until” formatting. They do not need a device.
 
 ## Releases
 

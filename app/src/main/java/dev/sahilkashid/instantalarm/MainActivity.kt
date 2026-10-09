@@ -27,6 +27,7 @@ import dev.sahilkashid.instantalarm.alarm.AlarmPhase
 import dev.sahilkashid.instantalarm.alarm.AlarmRinger
 import dev.sahilkashid.instantalarm.alarm.RingingService
 import dev.sahilkashid.instantalarm.alarm.SnoozeScheduler
+import dev.sahilkashid.instantalarm.alarm.StartAlarmShortcut
 import dev.sahilkashid.instantalarm.domain.SnoozeDuration
 import dev.sahilkashid.instantalarm.ui.AlarmScreen
 import dev.sahilkashid.instantalarm.ui.theme.InstantAlarmTheme
@@ -83,12 +84,21 @@ class MainActivity : ComponentActivity() {
             }
         }
         requestNotificationPermission()
+        deliverShortcut(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         showOverLockScreen()
+        deliverShortcut(intent)
+    }
+
+    private fun deliverShortcut(intent: Intent?) {
+        if (!StartAlarmShortcut.matches(intent?.action)) return
+        AlarmController.onShortcutLaunch(this)
+        // Drop the action so a later recreate, such as rotation, does not ring again.
+        intent?.action = Intent.ACTION_MAIN
     }
 
     override fun onStart() {
