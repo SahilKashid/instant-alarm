@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -37,6 +38,8 @@ import dev.sahilkashid.instantalarm.alarm.PermissionBanners
 import dev.sahilkashid.instantalarm.alarm.RingingService
 import dev.sahilkashid.instantalarm.alarm.SettingsReturn
 import dev.sahilkashid.instantalarm.alarm.SnoozeScheduler
+import dev.sahilkashid.instantalarm.alarm.VolumeKeyPolicy
+import dev.sahilkashid.instantalarm.alarm.VolumeSnoozeGate
 import dev.sahilkashid.instantalarm.domain.SnoozeDuration
 import dev.sahilkashid.instantalarm.ui.AlarmScreen
 import dev.sahilkashid.instantalarm.ui.theme.InstantAlarmTheme
@@ -114,6 +117,21 @@ class MainActivity : ComponentActivity() {
         if (intent.action == Intent.ACTION_MAIN) {
             returningFromSettings = false
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val decision = VolumeKeyPolicy.forActivityKey(
+            keyCode = event.keyCode,
+            action = event.action,
+            repeatCount = event.repeatCount,
+            ringing = AlarmRinger.isPlaying(),
+            pressAlreadyAccepted = VolumeSnoozeGate.isConsumed(),
+        )
+        if (!decision.consume) return super.dispatchKeyEvent(event)
+        if (decision.snooze && VolumeSnoozeGate.tryConsume()) {
+            AlarmController.snooze(this, SnoozeScheduler.minutes(this))
+        }
+        return true
     }
 
     override fun onStart() {

@@ -6,6 +6,7 @@
 -keep class dev.sahilkashid.instantalarm.MainActivity { *; }
 -keep class dev.sahilkashid.instantalarm.alarm.StartAlarmActivity { *; }
 -keep class dev.sahilkashid.instantalarm.alarm.RingingService { *; }
+-keep class dev.sahilkashid.instantalarm.alarm.RingingService$AlarmVolumeProvider { *; }
 -keep class dev.sahilkashid.instantalarm.alarm.AlarmReceiver { *; }
 -keep class dev.sahilkashid.instantalarm.alarm.BootReceiver { *; }
 
