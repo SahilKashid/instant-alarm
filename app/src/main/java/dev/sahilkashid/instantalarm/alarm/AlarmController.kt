@@ -77,6 +77,7 @@ object AlarmController {
     }
 
     private fun ensureRinging(context: Context, reason: String) {
+        VolumeSnoozeGate.onRingingStarted()
         try {
             RingingService.start(context, reason)
         } catch (_: RuntimeException) {

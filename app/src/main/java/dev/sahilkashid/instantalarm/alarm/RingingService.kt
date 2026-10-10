@@ -5,9 +5,12 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.VolumeProvider
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -82,6 +85,10 @@ class RingingService : Service() {
                     .setState(PlaybackState.STATE_PLAYING, 0L, 1f)
                     .build(),
             )
+            // Remote volume takes hardware volume keys while this session is
+            // the active one, including when only the heads-up notification
+            // is showing. The provider does not adjust the alarm stream.
+            setPlaybackToRemote(AlarmVolumeProvider(applicationContext))
             isActive = true
         }
     }
@@ -113,6 +120,28 @@ class RingingService : Service() {
             startActivity(launch)
         } catch (_: RuntimeException) {
             // Full-screen intent on the notification is the fallback.
+        }
+    }
+
+    /**
+     * Relative volume so a press calls [onAdjustVolume] and the system does
+     * not change a local stream. One press snoozes; repeats hit the gate.
+     */
+    private class AlarmVolumeProvider(
+        private val appContext: Context,
+    ) : VolumeProvider(VolumeProvider.VOLUME_CONTROL_RELATIVE, 1, 1) {
+        override fun onAdjustVolume(direction: Int) {
+            if (!VolumeKeyPolicy.remoteAdjustRequestsSnooze(direction)) return
+            if (!AlarmRinger.isPlaying()) return
+            val snooze = Runnable {
+                if (!VolumeSnoozeGate.tryConsume()) return@Runnable
+                AlarmController.snooze(appContext, SnoozeScheduler.minutes(appContext))
+            }
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                snooze.run()
+            } else {
+                Handler(Looper.getMainLooper()).post(snooze)
+            }
         }
     }
 
